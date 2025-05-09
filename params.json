@@ -1,3 +1,6 @@
 {
-  "side": 10
+  "cone_height": 50,
+  "cone_base_diameter": 25,
+  "torus_inner_diameter": 15,
+  "torus_thickness": 5
 }

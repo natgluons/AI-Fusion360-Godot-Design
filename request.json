@@ -1,0 +1,46 @@
+[
+  {
+    "role": "system",
+    "content": "You are a CAD assistant that converts user instructions into a JSON parameters file and a Python script for Fusion 360. \n            Your response MUST contain exactly two sections:\n            1. ### PARAMS.JSON - A JSON object with all parameters needed for the design\n            2. ### FUSION_SCRIPT.PY - A complete Python script that implements the design in Fusion 360\n            \n            The JSON and Python code must be properly formatted and executable. Ensure the file names are correct and the code is valid.\n            Do not include any other text, formatting, or explanations."
+  },
+  {
+    "role": "user",
+    "content": "Make a cube 10x10x10"
+  },
+  {
+    "role": "assistant",
+    "content": "### PARAMS.JSON\n{\n  \"type\": \"cube\",\n  \"width\": 10,\n  \"height\": 10,\n  \"depth\": 10\n}\n\n### FUSION_SCRIPT.PY\nimport adsk.core, adsk.fusion, adsk.cam, traceback\ndef run(context):\n    try:\n        app = adsk.core.Application.get()\n        design = adsk.fusion.Design.cast(app.activeProduct)\n        rootComp = design.rootComponent\n        width = 10\n        height = 10\n        depth = 10\n        sketches = rootComp.sketches\n        xyPlane = rootComp.xYConstructionPlane\n        sketch = sketches.add(xyPlane)\n        rect = sketch.sketchCurves.sketchLines.addTwoPointRectangle(\n            adsk.core.Point3D.create(0, 0, 0),\n            adsk.core.Point3D.create(width, height, 0)\n        )\n        prof = sketch.profiles.item(0)\n        extrudes = rootComp.features.extrudeFeatures\n        extInput = extrudes.createInput(prof, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)\n        distance = adsk.core.ValueInput.createByReal(depth)\n        extInput.setDistanceExtent(False, distance)\n        extrudes.add(extInput)\n    except:\n        app.userInterface.messageBox('Failed: {}'.format(traceback.format_exc()))\n"
+  },
+  {
+    "role": "system",
+    "content": "You are a CAD assistant that converts user instructions into a JSON parameters file and a Python script for Fusion 360. \n            Your response MUST contain exactly two sections:\n            1. ### PARAMS.JSON - A JSON object with all parameters needed for the design\n            2. ### FUSION_SCRIPT.PY - A complete Python script that implements the design in Fusion 360\n            \n            The JSON and Python code must be properly formatted and executable. Ensure the file names are correct and the code is valid.\n            Do not include any other text, formatting, or explanations."
+  },
+  {
+    "role": "user",
+    "content": "Create cylinder with sphere on top"
+  },
+  {
+    "role": "assistant",
+    "content": "### PARAMS.JSON\n{\n  \"type\": \"cylinder\",\n  \"diameter\": 30,\n  \"height\": 50,\n  \"sphere_diameter\": 20\n}\n\n### FUSION_SCRIPT.PY\nimport adsk.core, adsk.fusion, adsk.cam, traceback\n\ndef run(context):\n    try:\n        app = adsk.core.Application.get()\n        design = adsk.fusion.Design.cast(app.activeProduct)\n        rootComp = design.rootComponent\n        \n        # Parameters from params.json\n        cylinder_diameter = 30\n        cylinder_height = 50\n        sphere_diameter = 20\n        \n        # Create cylinder\n        sketches = rootComp.sketches\n        xyPlane = rootComp.xYConstructionPlane\n        sketch = sketches.add(xyPlane)\n        circles = sketch.sketchCurves.sketchCircles\n        circle = circles.addByCenterRadius(\n            adsk.core.Point3D.create(0, 0, 0),\n            cylinder_diameter/2\n        )\n        prof = sketch.profiles.item(0)\n        extrudes = rootComp.features.extrudeFeatures\n        extInput = extrudes.createInput(\n            prof,\n            adsk.fusion.FeatureOperations.NewBodyFeatureOperation\n        )\n        distance = adsk.core.ValueInput.createByReal(cylinder_height)\n        extInput.setDistanceExtent(False, distance)\n        cylinder = extrudes.add(extInput)\n        \n        # Create sphere on top\n        sphere_radius = sphere_diameter/2\n        sphere_center = adsk.core.Point3D.create(\n            0, 0, cylinder_height + sphere_radius\n        )\n        spheres = rootComp.features.sphereFeatures\n        sphereInput = spheres.createInput(\n            adsk.core.ValueInput.createByReal(sphere_radius),\n            sphere_center\n        )\n        spheres.add(sphereInput)\n        \n    except:\n        if app:\n            app.userInterface.messageBox(\n                'Failed:\\n{}'.format(traceback.format_exc())\n            )\n"
+  },
+  {
+    "role": "system",
+    "content": "You are a CAD assistant that converts user instructions into a JSON parameters file and a Python script for Fusion 360. \n            Your response MUST contain exactly two sections:\n            1. ### PARAMS.JSON - A JSON object with all parameters needed for the design\n            2. ### FUSION_SCRIPT.PY - A complete Python script that implements the design in Fusion 360\n            \n            The JSON and Python code must be properly formatted and executable. Ensure the file names are correct and the code is valid.\n            Do not include any other text, formatting, or explanations."
+  },
+  {
+    "role": "user",
+    "content": "Make rectangular block with holes"
+  },
+  {
+    "role": "assistant",
+    "content": "### PARAMS.JSON\n{\n  \"type\": \"block_with_holes\",\n  \"width\": 60,\n  \"depth\": 40,\n  \"height\": 20,\n  \"holes\": [\n    {\n      \"diameter\": 10,\n      \"x\": -15,\n      \"y\": 0\n    },\n    {\n      \"diameter\": 10,\n      \"x\": 15,\n      \"y\": 0\n    }\n  ]\n}\n\n### FUSION_SCRIPT.PY\nimport adsk.core, adsk.fusion, adsk.cam, traceback\n\ndef run(context):\n    try:\n        app = adsk.core.Application.get()\n        design = adsk.fusion.Design.cast(app.activeProduct)\n        rootComp = design.rootComponent\n        \n        # Parameters from params.json\n        width = 60\n        depth = 40\n        height = 20\n        holes = [\n            {\"diameter\": 10, \"x\": -15, \"y\": 0},\n            {\"diameter\": 10, \"x\": 15, \"y\": 0}\n        ]\n        \n        # Create base block\n        sketches = rootComp.sketches\n        xyPlane = rootComp.xYConstructionPlane\n        sketch = sketches.add(xyPlane)\n        rect = sketch.sketchCurves.sketchLines.addTwoPointRectangle(\n            adsk.core.Point3D.create(-width/2, -depth/2, 0),\n            adsk.core.Point3D.create(width/2, depth/2, 0)\n        )\n        prof = sketch.profiles.item(0)\n        extrudes = rootComp.features.extrudeFeatures\n        extInput = extrudes.createInput(\n            prof,\n            adsk.fusion.FeatureOperations.NewBodyFeatureOperation\n        )\n        distance = adsk.core.ValueInput.createByReal(height)\n        extInput.setDistanceExtent(False, distance)\n        block = extrudes.add(extInput)\n        \n        # Create holes\n        topFace = block.endFaces[0]\n        holeSketch = sketches.add(topFace)\n        for hole in holes:\n            holeSketch.sketchCurves.sketchCircles.addByCenterRadius(\n                adsk.core.Point3D.create(hole[\"x\"], hole[\"y\"], 0),\n                hole[\"diameter\"]/2\n            )\n        \n        for i in range(len(holes)):\n            prof = holeSketch.profiles.item(i)\n            holeInput = extrudes.createInput(\n                prof,\n                adsk.fusion.FeatureOperations.CutFeatureOperation\n            )\n            holeInput.setDistanceExtent(False, adsk.core.ValueInput.createByReal(height))\n            extrudes.add(holeInput)\n            \n    except:\n        if app:\n            app.userInterface.messageBox(\n                'Failed:\\n{}'.format(traceback.format_exc())\n            )\n"
+  },
+  {
+    "role": "system",
+    "content": "You are a CAD assistant that converts user instructions into a JSON parameters file and a Python script for Fusion 360. \n            Your response MUST contain exactly two sections:\n            1. ### PARAMS.JSON - A JSON object with all parameters needed for the design\n            2. ### FUSION_SCRIPT.PY - A complete Python script that implements the design in Fusion 360\n            \n            The JSON and Python code must be properly formatted and executable. Ensure the file names are correct and the code is valid.\n            Do not include any other text, formatting, or explanations."
+  },
+  {
+    "role": "user",
+    "content": "Create a table"
+  }
+]

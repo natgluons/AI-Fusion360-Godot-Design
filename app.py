@@ -16,7 +16,17 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-MODEL_ID = "deepseek/deepseek-r1:free"
+
+def get_available_models():
+    # Hardcoded list of free models
+    return [
+        "deepseek/deepseek-chat-v3-0324:free",
+        "deepseek/deepseek-r1:free",
+        "google/gemini-2.0-flash-exp:free",
+        "meta-llama/llama-4-maverick:free",
+        "qwen/qwen3-235b-a22b:free"
+    ]
+
 system_prompt =  {
             "role": "system", 
             "content": """You are a CAD assistant that converts user instructions into a JSON parameters file and a Python script for Fusion 360. 
@@ -83,7 +93,7 @@ def get_example_messages() -> list:
 
     return examples
 
-def generate_file(user_prompt, example_number=1):
+def generate_file(user_prompt, model_name, example_number=1):
     # Parse example number from command line
     parser = argparse.ArgumentParser(description='Generate CAD files from examples')
     parser.add_argument('--example', type=int, default=example_number,
@@ -131,10 +141,10 @@ def generate_file(user_prompt, example_number=1):
         json.dump(messages, f, indent=2)
 
     payload = {
-        "model": "anthropic/claude-3-opus",
+        "model": model_name,  # Use the selected model
         "messages": messages,
         "temperature": 0.7,
-        "max_tokens": 2000,
+        # "max_tokens": 2000,
         "stop_sequences": ["\n\nHuman:"]
     }
 
@@ -199,15 +209,31 @@ def generate_file(user_prompt, example_number=1):
         logger.error(f"Error (line {e.__traceback__.tb_lineno}): {str(e)}")
         return f"Error: {str(e)}", None, None
 
+
+def main():
+    models = get_available_models()
+    with gr.Blocks() as demo:
+        gr.Markdown("# Fusion 360 CAD Generator")
+        with gr.Row():
+            model_dropdown = gr.Dropdown(
+                choices=models,
+                label="Select Model",
+                value=models[0] if models else "deepseek/deepseek-r1:free"
+            )
+            prompt_input = gr.Textbox(label="Enter CAD Instructions", lines=4)
+        with gr.Row():
+            submit_btn = gr.Button("Generate")
+        with gr.Row():
+            status = gr.Textbox(label="Status")
+            param_file = gr.File(label="Parameters File")
+            script_file = gr.File(label="Script File")
+       
+        submit_btn.click(
+            fn=generate_file,
+            inputs=[prompt_input, model_dropdown],
+            outputs=[status, param_file, script_file]
+        )
+    demo.launch()
+
 if __name__ == "__main__":
-    iface = gr.Interface(
-        fn=generate_file,
-        inputs=gr.Textbox(label="Enter CAD instructions", lines=4),
-        outputs=[
-            gr.Textbox(label="Status"),
-            gr.File(label="Download params.json"),
-            gr.File(label="Download script")
-        ],
-        title="Fusion 360 CAD Generator"
-    )
-    iface.launch()
+    main()
