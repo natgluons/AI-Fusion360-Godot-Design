@@ -9,18 +9,63 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 MODEL_ID = "google/gemini-2.0-flash-exp:free"
 
 def generate_files(user_prompt):
-    # Define your OpenRouter call
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json"
     }
-    
-    system_prompt = (
-        "You are a CAD assistant. Based on the user's prompt, generate a params.json file "
-        "with all key-value parameters needed for the design, and a Fusion360 Python script "
-        "using these parameters. Only return plain JSON and Python script as separate sections."
-    )
-    
+
+    few_shot_prompt = """
+You are a CAD assistant that converts user instructions into two outputs:
+
+1. A JSON file `params.json` describing the design parameters.
+2. A Python script `fusion_script.py` using Fusion360 API to generate the requested shape.
+
+Only return the code files. Start with:
+###PARAMS.JSON
+{...}
+###FUSION_SCRIPT.PY
+<python code here>
+    """
+
+    examples = """
+Example:
+User: "Make a cube 10x10x10"
+Output:
+###PARAMS.JSON
+{
+  "width": 10,
+  "height": 10,
+  "depth": 10
+}
+###FUSION_SCRIPT.PY
+import adsk.core, adsk.fusion, adsk.cam, traceback
+def run(context):
+    try:
+        app = adsk.core.Application.get()
+        design = adsk.fusion.Design.cast(app.activeProduct)
+        rootComp = design.rootComponent
+        width = 10
+        height = 10
+        depth = 10
+        sketches = rootComp.sketches
+        xyPlane = rootComp.xYConstructionPlane
+        sketch = sketches.add(xyPlane)
+        rect = sketch.sketchCurves.sketchLines.addTwoPointRectangle(
+            adsk.core.Point3D.create(0, 0, 0),
+            adsk.core.Point3D.create(width, height, 0)
+        )
+        prof = sketch.profiles.item(0)
+        extrudes = rootComp.features.extrudeFeatures
+        extInput = extrudes.createInput(prof, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+        distance = adsk.core.ValueInput.createByReal(depth)
+        extInput.setDistanceExtent(False, distance)
+        extrudes.add(extInput)
+    except:
+        app.userInterface.messageBox('Failed: {}'.format(traceback.format_exc()))
+    """
+
+    system_prompt = few_shot_prompt + examples
+
     payload = {
         "model": MODEL_ID,
         "messages": [
@@ -31,39 +76,29 @@ def generate_files(user_prompt):
 
     response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
     result = response.json()
-    
-    # Basic error handling
+    content = result['choices'][0]['message']['content']
+
+    # Parse AI's output
     try:
-        # Use OpenRouter API to convert user_prompt into params
-        # (mocked below for example)
-        # In a real implementation, you would use the user_prompt to determine
-        # the parameters for the CAD design.
-        # For this example, we'll use a simple heuristic:
-        if "cube" in user_prompt.lower():
-            params = {"width": 25, "height": 25, "depth": 25}
-        elif "rectangle" in user_prompt.lower():
-            params = {"width": 40, "height": 20, "depth": 10}
-        else:
-            # Default parameters
-            params = {"width": 30, "height": 30, "depth": 30}
+        # Extract between markers
+        param_start = content.find("###PARAMS.JSON") + len("###PARAMS.JSON")
+        script_start = content.find("###FUSION_SCRIPT.PY")
 
-        # Save JSON
+        param_str = content[param_start:script_start].strip()
+        script_str = content[script_start + len("###FUSION_SCRIPT.PY"):].strip()
+
+        # Save param.json
         with open("params.json", "w") as f:
-            json.dump(params, f, indent=4)
+            f.write(param_str)
 
-        # Load and use template for .py
-        with open("template_fusion_script.py", "r") as f:
-            with open("fusion_script.py", "w") as outfile:
-                script_template = f.read()
-                script_template = script_template.replace("WIDTH", str(params["width"]))
-                script_template = script_template.replace("HEIGHT", str(params["height"]))
-                script_template = script_template.replace("DEPTH", str(params["depth"]))
-                outfile.write(script_template)
+        # Save fusion_script.py
+        with open("fusion_script.py", "w") as f:
+            f.write(script_str)
 
         return "Files generated successfully!", "params.json", "fusion_script.py"
-
     except Exception as e:
         return f"Parsing error: {e}", None, None
+
 
 # Gradio UI
 iface = gr.Interface(
